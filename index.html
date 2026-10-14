@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Store Planner · Bodega A001 Layout & Surtido</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Enlace al nuevo archivo CSS -->
+    <link rel="stylesheet" href="./css/styles.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { brand: { 50: '#f0f7ff', 100: '#e0effe', 500: '#0284c7', 900: '#1e4b6e' } } } }
+        }
+    </script>
+
+</head>
+
+<body class="p-2 sm:p-6 min-h-screen">
+
+<div class="app-container rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 shadow-2xl relative border border-slate-200/20 dark:border-slate-800/60">
+    
+    <div class="flex justify-between items-center mb-6">
+        
+        <h1 class="text-3xl font-extrabold flex items-center gap-3">
+            <i class="fas fa-warehouse text-sky-500"></i>
+            <span class="bg-gradient-to-r from-slate-900 to-sky-600 dark:from-white dark:to-sky-400 bg-clip-text text-transparent">Store Planner · Surtido & Bodega A001</span>
+        </h1>
+
+        <button id="themeToggleBtn" class="bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 p-3 rounded-full shadow-lg hover:opacity-90 transition-all flex items-center gap-2 font-bold text-xs">
+            <i class="fas fa-sun text-amber-500 block dark:hidden"></i>
+            <i class="fas fa-moon text-indigo-400 hidden dark:block"></i>
+            <span id="themeText">Modo Oscuro</span>
+        </button>
+
+    </div>
+
+    <!-- Barra de Herramientas Principal -->
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-8 bg-slate-100/50 dark:bg-slate-900/50 rounded-3xl px-6 py-4 border border-slate-200/40 dark:border-slate-800/40">
+        <div class="flex flex-wrap items-center gap-4">
+            
+            <label class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-5 py-2 inline-flex items-center gap-2 cursor-pointer hover:border-sky-500 transition-colors shadow-sm">
+                <i class="fas fa-file-excel text-emerald-500"></i>
+                <span class="text-sm font-semibold text-slate-700 dark:text-slate-200" id="fileName">📂 Cargar SAP</span>
+                <input type="file" id="inputExcel" accept=".xls,.xlsx" class="hidden" />
+            </label>
+            
+            <button id="magicProcessBtn" class="bg-gradient-to-r from-sky-600 to-sky-500 text-white font-bold text-sm px-6 py-2.5 rounded-full shadow-md hover:opacity-95 transition-all inline-flex items-center gap-2">
+                <i class="fas fa-magic"></i> Procesar Inventario
+            </button>
+            
+            <!-- Botón de búsqueda rápida -->
+            <div id="searchContainer" class="hidden">
+                <i class="fas fa-search text-slate-400 absolute left-4 top-3.5 text-xs"></i>
+                <input type="text" id="quickSearchInput" placeholder="Buscar familia o proveedor..." class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full pl-9 pr-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 shadow-sm w-56 md:w-64 transition-all">
+            </div>
+            
+        </div>
+        
+        <div id="viewFilters" class="bg-slate-200/60 dark:bg-slate-800/80 rounded-full p-1 border border-slate-300/30 inline-flex shadow-inner hidden">
+            
+            <button class="loc-btn active px-5 py-2 text-xs font-bold rounded-full text-slate-600 dark:text-slate-300 transition-all duration-200" data-loc="todos">
+                <i class="fas fa-chart-pie mr-1"></i> Todos
+            </button>
+            
+            <button class="loc-btn px-5 py-2 text-xs font-bold rounded-full text-slate-600 dark:text-slate-300 transition-all duration-200" data-loc="piso">
+                <i class="fas fa-store mr-1"></i> Layout Piso de Venta
+            </button>
+            
+            <button class="loc-btn px-5 py-2 text-xs font-bold rounded-full text-slate-600 dark:text-slate-300 transition-all duration-200" data-loc="bodega">
+                <i class="fas fa-warehouse mr-1"></i> Layout Bodega
+            </button>
+
+        </div>
+    </div>
+
+    <!-- Pantalla de Bienvenida -->
+    <div id="welcomeScreen" class="flex flex-col items-center justify-center py-20 text-center">
+        <i class="fas fa-boxes text-6xl text-slate-300 dark:text-slate-700 mb-6"></i>
+        <h2 class="text-2xl font-bold text-slate-600 dark:text-slate-400 mb-2">Sube un archivo de inventario SAP</h2>
+        <p class="text-slate-500 dark:text-slate-500 max-w-md mx-auto">Para comenzar a planificar el layout, ver el stock y gestionar pedidos a bodega, carga tu archivo `.xlsx` o `.xls` desde el botón superior.</p>
+    </div>
+
+    <!-- Contenedor Principal (Se muestra post-carga) -->
+    <div id="mainContent" style="display: none;">
+
+        <!-- Sección Analítica de Familias -->
+        <div id="analiticoFamiliasSection" class="mb-8">
+            
+            <div class="bg-slate-100/30 dark:bg-slate-900/30 rounded-[28px] p-3 sm:p-6 border border-slate-200/30 dark:border-slate-800/30">
+            
+                <h3 class="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                    <i class="fas fa-tags text-sky-500"></i> Familias de Productos
+                </h3>
+            
+                <div id="familiasCarrusel" class="rockola-container"></div>
+            
+            </div>
+        </div>
+
+        <!-- Sección Analítica de Subfamilias -->
+        <div id="subfamiliasContainer" class="mb-8" style="display: none;">
+           
+            <div class="bg-slate-100/30 dark:bg-slate-900/30 rounded-[28px] p-3 sm:p-6 border border-slate-200/30 dark:border-slate-800/30 relative">
+                                
+                <button id="cerrarSubfamiliasBtn" class="absolute top-4 right-4 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full w-8 h-8 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all"><i class="fas fa-times"></i></button>
+                
+                <h3 class="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                    <i class="fas fa-sitemap text-indigo-500"></i> Subfamilias de <span id="familiaLabelTitle" class="text-sky-500 font-black"></span>
+                </h3>
+                
+                <div id="subfamiliasGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2.5"></div>
+            
+            </div>
+        </div>
+
+        <!-- Sección Analítica de Proveedores y Estilos -->
+        <div id="proveedoresContainer" class="mb-8" style="display: none;">
+            <div class="bg-slate-100/30 dark:bg-slate-900/30 rounded-[28px] p-3 sm:p-6 border border-slate-200/30 dark:border-slate-800/30">
+                <h3 class="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                    <i class="fas fa-boxes text-emerald-500"></i> Proveedores y Estilos (Por orden PEPS)
+                </h3>
+                <div id="proveedoresGrid" class="space-y-6"></div>
+            </div>
+        </div>
+
+        <!-- Layout Gráfico de la Bodega y Bandeja de Pedidos -->
+        <div id="bodegaLayout" class="bg-slate-100/30 dark:bg-slate-900/30 rounded-3xl p-6 border border-slate-200/30 dark:border-slate-800/30 mb-8" style="display: none;">
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                <div class="xl:col-span-3">
+                    <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+                        <button id="reorganizarBtn" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-5 py-2.5 rounded-full shadow transition-transform active:scale-95 inline-flex items-center gap-1.5">
+                            <i class="fas fa-compress-arrows-alt"></i> Reorganizar y Segregar por PEPS
+                        </button>
+                        <div class="flex items-center gap-3">
+                            <button id="toggleExcluirBtn" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs px-5 py-2.5 rounded-full hover:bg-red-500 hover:text-white transition-all active:scale-95">
+                                <i class="fas fa-ban mr-1"></i> Excluir PLAYERA BÁSICA
+                            </button>
+                            <span id="exclusionBadge" class="bg-amber-500/20 text-amber-500 text-xs font-bold px-4 py-2 rounded-full inline-flex items-center gap-1.5 shadow-sm" style="display:none;">
+                                🚫 Excluida
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 mb-6 border border-slate-200/40 dark:border-slate-800/40 flex justify-between items-center flex-wrap gap-4 text-xs md:text-sm text-slate-700 dark:text-slate-200 font-bold shadow-sm" id="statsBar">
+                        Calculando cubicaje...
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-x-auto pb-4" id="tramosGrid"></div>
+                </div>
+
+                <div class="xl:col-span-1">
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-lg p-5 h-full">
+                        <h3 class="text-sm font-extrabold text-sky-600 dark:text-sky-400 mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-3">
+                            <i class="fas fa-clipboard-list"></i> Bandeja de Pedidos
+                        </h3>
+                        <div id="bandejaPedidosContainer" class="overflow-y-auto max-h-[600px] pr-2 space-y-4">
+                            <div class="text-center text-slate-500 text-xs py-8">No hay pedidos pendientes.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plano Piso de Venta -->
+        <div id="canvasWrapper" class="canvas-wrapper mb-6">
+            <canvas id="planoTienda" width="800" height="600" class="w-full h-auto border border-slate-200 dark:border-slate-800 rounded-3xl shadow-lg"></canvas>
+            
+            <div class="legend flex flex-wrap justify-center gap-6 mt-6 bg-slate-100/60 dark:bg-slate-900/60 py-3 px-6 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200/20 dark:border-slate-800/20">
+                <span><div class="color-box inline-block w-4 h-4 rounded bg-emerald-500 mr-1.5 align-middle"></div> Piso</span>
+                <span><div class="color-box inline-block w-4 h-4 rounded bg-amber-500 mr-1.5 align-middle"></div> Bodega</span>
+                <span><div class="color-box inline-block w-4 h-4 rounded bg-emerald-600 mr-1.5 align-middle"></div> Mueble óptimo (≥20)</span>
+                <span><div class="color-box inline-block w-4 h-4 rounded bg-amber-600 mr-1.5 align-middle"></div> Stock bajo (1-19)</span>
+                <span><div class="color-box inline-block w-4 h-4 rounded bg-rose-600 mr-1.5 align-middle"></div> Agotado (0)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Tubo -->
+<div id="modalTubo" class="modal">
+    <div class="modal-contenido border shadow-2xl p-6 rounded-[32px] w-[95%] max-w-5xl transition-all scale-95 duration-300">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
+            <div>
+                <h3 id="modalTitulo" class="text-xl font-extrabold text-sky-600 dark:text-sky-400 flex items-center gap-2">
+                    <i class="fas fa-boxes"></i> Contenido del Tubo
+                </h3>
+            </div>
+            <button class="bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs px-5 py-2.5 rounded-full transition-all active:scale-95 shadow" id="cerrarModalBtn">
+                Cerrar Panel
+            </button>
+        </div>
+        
+        <div class="mb-2">
+            <h4 class="text-xs font-bold text-sky-600 dark:text-sky-400 mb-2 flex items-center gap-1.5">
+                <i class="fas fa-compact-disc text-spin"></i> Estilos en este Tubo
+            </h4>
+            <div class="rockola-container" id="rockolaEstilosContenedor"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Carrito de Solicitudes Flotante -->
+<div class="surtido-panel shadow-2xl" id="surtidoPanel">
+    <div class="surtido-header flex justify-between items-center bg-gradient-to-r from-emerald-600 to-emerald-500" id="surtidoToggle">
+        <span class="font-bold flex items-center gap-2">
+            <i class="fas fa-shopping-cart text-white"></i> Cesta de Solicitud (<span id="surtidoCount">0</span>)
+        </span>
+        <i class="fas fa-chevron-up transition-transform duration-250" id="iconToggleSurtido"></i>
+    </div>
+    <div class="surtido-contenido" id="surtidoContenido">
+        <div class="text-xs text-slate-500 dark:text-slate-400 mb-3"><i class="fas fa-info-circle"></i> Estas prendas no se descuentan del inventario hasta ser surtidas por bodega.</div>
+        <div id="surtidoLista" class="max-h-[250px] overflow-y-auto mb-3"></div>
+        <button class="bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-full py-3 px-4 w-full shadow hover:shadow-lg transition-all" id="enviarPedidoBtn">
+            <i class="fas fa-paper-plane mr-1.5"></i> Enviar Solicitud a Bodega
+        </button>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Llama al archivo JS como un módulo de ES6 -->
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
